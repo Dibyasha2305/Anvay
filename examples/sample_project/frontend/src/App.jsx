@@ -16,7 +16,6 @@ const DEMO_MODE =
 
 // ============================================================
 // DEMO DATA
-// Used only on the public Vercel version.
 // ============================================================
 
 const demoReport = {
@@ -91,24 +90,10 @@ const demoReport = {
 
 function App() {
 
-  // ----------------------------------------------------------
-  // FILES
-  // ----------------------------------------------------------
-
   const [backendFile, setBackendFile] = useState(null)
   const [aiFile, setAiFile] = useState(null)
 
-
-  // ----------------------------------------------------------
-  // RESULTS
-  // ----------------------------------------------------------
-
   const [report, setReport] = useState(null)
-
-
-  // ----------------------------------------------------------
-  // UI STATE
-  // ----------------------------------------------------------
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -132,58 +117,41 @@ function App() {
       "Reading service contracts"
     )
 
-
     setTimeout(() => {
-
       setJobStep("integrating")
-
       setJobMessage(
         "Generating integration adapter"
       )
-
     }, 700)
 
-
     setTimeout(() => {
-
       setJobStep("verifying")
-
       setJobMessage(
         "Running end-to-end verification"
       )
-
     }, 1400)
 
-
     setTimeout(() => {
-
       setJobStep("packaging")
-
       setJobMessage(
         "Preparing verified artifact"
       )
-
     }, 2100)
 
-
     setTimeout(() => {
-
       setJobStep("complete")
-
       setJobMessage(
         "Demo integration complete"
       )
 
       setReport(demoReport)
-
       setLoading(false)
-
     }, 2800)
   }
 
 
   // ==========================================================
-  // REAL ANALYSIS
+  // REAL ENGINE
   // ==========================================================
 
   async function handleRealAnalysis() {
@@ -200,11 +168,10 @@ function App() {
       aiFile
     )
 
-
     try {
 
       // ------------------------------------------------------
-      // START JOB
+      // Start analysis
       // ------------------------------------------------------
 
       const response = await fetch(
@@ -215,26 +182,22 @@ function App() {
         }
       )
 
-
       const startData =
         await response.json()
 
-
       if (!response.ok) {
-
         throw new Error(
           startData.message ||
           "Could not start Anvay."
         )
       }
 
-
       const jobId =
         startData.job_id
 
 
       // ------------------------------------------------------
-      // POLL JOB
+      // Poll status
       // ------------------------------------------------------
 
       const pollStatus = async () => {
@@ -244,19 +207,15 @@ function App() {
             `${API_URL}/status/${jobId}`
           )
 
-
         const statusData =
           await statusResponse.json()
 
-
         if (!statusResponse.ok) {
-
           throw new Error(
             statusData.message ||
             "Could not read analysis status."
           )
         }
-
 
         setJobStep(
           statusData.step
@@ -268,13 +227,12 @@ function App() {
 
 
         // ----------------------------------------------------
-        // FAILURE
+        // Failed
         // ----------------------------------------------------
 
         if (
           statusData.step === "failed"
         ) {
-
           throw new Error(
             statusData.message ||
             "Integration failed."
@@ -283,7 +241,7 @@ function App() {
 
 
         // ----------------------------------------------------
-        // SUCCESS
+        // Complete
         // ----------------------------------------------------
 
         if (
@@ -301,7 +259,7 @@ function App() {
 
 
         // ----------------------------------------------------
-        // KEEP POLLING
+        // Continue polling
         // ----------------------------------------------------
 
         setTimeout(
@@ -309,7 +267,6 @@ function App() {
           700
         )
       }
-
 
       await pollStatus()
 
@@ -331,10 +288,6 @@ function App() {
 
   async function handleAnalyze() {
 
-    // --------------------------------------------------------
-    // Validate files
-    // --------------------------------------------------------
-
     if (!backendFile || !aiFile) {
 
       setError(
@@ -344,15 +297,8 @@ function App() {
       return
     }
 
-
-    // --------------------------------------------------------
-    // Reset UI
-    // --------------------------------------------------------
-
     setLoading(true)
-
     setError("")
-
     setReport(null)
 
     setJobStep("starting")
@@ -365,7 +311,7 @@ function App() {
 
 
     // --------------------------------------------------------
-    // Demo mode
+    // Demo
     // --------------------------------------------------------
 
     if (DEMO_MODE) {
@@ -431,8 +377,16 @@ function App() {
 
       <header className="topbar">
 
-        <div className="wordmark">
-          ANVAY<span>.</span>
+        <div className="brand-lockup">
+
+          <div className="wordmark">
+            अन्वय
+          </div>
+
+          <div className="brand-meaning">
+            connection · relation · linkage
+          </div>
+
         </div>
 
 
@@ -462,31 +416,50 @@ function App() {
 
         <section className="hero">
 
-          <div className="eyebrow">
-            CODE INTEGRATION / 01
+          <div className="hero-meta">
+
+            <span>
+              ANVAY / 01
+            </span>
+
+            <span>
+              API INTEGRATION
+            </span>
+
           </div>
 
 
           <h1>
-            Integrate the things
+            When APIs don't
             <br />
-            your code wasn't built
+            speak the same
             <br />
-            to talk to.
+            <em>language.</em>
           </h1>
 
 
-          <p className="hero-copy">
-            Analyze two services. Detect the contract gap.
-            Generate the bridge. Verify the result.
-          </p>
+          <div className="hero-bottom">
+
+            <p className="hero-copy">
+
+              Find the mismatch.
+              <br />
+              Build the bridge.
+              <br />
+              Verify the connection.
+
+            </p>
 
 
-          <p className="mode-note">
-            {DEMO_MODE
-              ? "Interactive product demo"
-              : "Running against your local integration engine"}
-          </p>
+            <p className="mode-note">
+
+              {DEMO_MODE
+                ? "Interactive product demo"
+                : "Running against your local integration engine"}
+
+            </p>
+
+          </div>
 
         </section>
 
@@ -542,8 +515,8 @@ function App() {
                     null
 
                   setBackendFile(file)
-
                   setError("")
+
                 }}
               />
 
@@ -608,8 +581,8 @@ function App() {
                     null
 
                   setAiFile(file)
-
                   setError("")
+
                 }}
               />
 
@@ -675,9 +648,11 @@ function App() {
             >
 
               <span>
+
                 {loading
                   ? "RUNNING ANVAY"
                   : "RUN ANVAY"}
+
               </span>
 
 
@@ -706,9 +681,7 @@ function App() {
               <div className="progress-list">
 
 
-                {/* -----------------------------------------
-                    01 ANALYZING
-                ----------------------------------------- */}
+                {/* ANALYZING */}
 
                 <div
                   className={
@@ -743,9 +716,7 @@ function App() {
                 </div>
 
 
-                {/* -----------------------------------------
-                    02 INTEGRATING
-                ----------------------------------------- */}
+                {/* INTEGRATING */}
 
                 <div
                   className={
@@ -784,9 +755,7 @@ function App() {
                 </div>
 
 
-                {/* -----------------------------------------
-                    03 VERIFYING
-                ----------------------------------------- */}
+                {/* VERIFYING */}
 
                 <div
                   className={
@@ -825,9 +794,7 @@ function App() {
                 </div>
 
 
-                {/* -----------------------------------------
-                    04 PACKAGING
-                ----------------------------------------- */}
+                {/* PACKAGING */}
 
                 <div
                   className={
@@ -914,9 +881,7 @@ function App() {
           <section className="results">
 
 
-            {/* =================================================
-                STATUS
-            ================================================= */}
+            {/* STATUS */}
 
             <div
               className={
@@ -966,9 +931,7 @@ function App() {
             </div>
 
 
-            {/* =================================================
-                SYSTEM MAP
-            ================================================= */}
+            {/* SYSTEM MAP */}
 
             <div className="result-heading">
 
@@ -987,7 +950,7 @@ function App() {
             <div className="pipeline">
 
 
-              {/* BACKEND NODE */}
+              {/* BACKEND */}
 
               <div className="pipeline-node">
 
@@ -1012,7 +975,7 @@ function App() {
               </div>
 
 
-              {/* ANVAY BRIDGE */}
+              {/* ANVAY */}
 
               <div className="pipeline-bridge">
 
@@ -1037,7 +1000,7 @@ function App() {
               </div>
 
 
-              {/* AI NODE */}
+              {/* AI SERVICE */}
 
               <div className="pipeline-node">
 
@@ -1064,9 +1027,7 @@ function App() {
             </div>
 
 
-            {/* =================================================
-                CONTRACTS
-            ================================================= */}
+            {/* CONTRACTS */}
 
             <div className="data-grid">
 
@@ -1241,9 +1202,7 @@ function App() {
             </div>
 
 
-            {/* =================================================
-                MAPPINGS
-            ================================================= */}
+            {/* MAPPINGS */}
 
             <div className="result-heading compact">
 
@@ -1291,9 +1250,7 @@ function App() {
             </div>
 
 
-            {/* =================================================
-                MISMATCHES
-            ================================================= */}
+            {/* MISMATCHES */}
 
             <div className="result-heading compact">
 
@@ -1368,9 +1325,7 @@ function App() {
             </div>
 
 
-            {/* =================================================
-                VERIFICATION
-            ================================================= */}
+            {/* VERIFICATION */}
 
             <div className="result-heading compact">
 
@@ -1387,7 +1342,6 @@ function App() {
 
 
             <div className="verification-grid">
-
 
               <div className="verify-cell">
 
@@ -1451,9 +1405,7 @@ function App() {
             </div>
 
 
-            {/* =================================================
-                TEST RESPONSE
-            ================================================= */}
+            {/* TEST RESPONSE */}
 
             {report.verification?.response && (
 
@@ -1477,9 +1429,7 @@ function App() {
             )}
 
 
-            {/* =================================================
-                DOWNLOAD
-            ================================================= */}
+            {/* DOWNLOAD */}
 
             {report.download_available && (
 
@@ -1511,9 +1461,11 @@ function App() {
                   download
                 >
                   DOWNLOAD ZIP
+
                   <span>
                     ↓
                   </span>
+
                 </a>
 
               </div>
@@ -1521,26 +1473,29 @@ function App() {
             )}
 
 
-            {/* =================================================
-                DEMO NOTICE
-            ================================================= */}
+            {/* DEMO NOTICE */}
 
             {DEMO_MODE && (
 
-              <div className="test-response">
+              <div className="demo-notice">
 
-                <div className="contract-label">
-                  DEMO MODE
+                <div className="demo-notice-mark">
+                  DEMO
                 </div>
 
+                <div>
 
-                <pre>
-This is an interactive demonstration of
-Anvay's integration workflow.
+                  <strong>
+                    Interactive preview
+                  </strong>
 
-Run Anvay locally to execute the real
-Docker-based integration engine.
-                </pre>
+                  <p>
+                    Explore the Anvay workflow here.
+                    Run the local version to execute
+                    the real Docker-based integration engine.
+                  </p>
+
+                </div>
 
               </div>
 
