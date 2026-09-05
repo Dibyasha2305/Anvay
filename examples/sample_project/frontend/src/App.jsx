@@ -1,111 +1,320 @@
 import { useState } from "react"
 import "./App.css"
 
+
+// ============================================================
+// ENVIRONMENT
+// ============================================================
+
 const API_URL =
   import.meta.env.VITE_API_URL ||
   "http://127.0.0.1:9000"
 
+const DEMO_MODE =
+  import.meta.env.VITE_DEMO_MODE === "true"
+
+
+// ============================================================
+// DEMO DATA
+// Used only on the public Vercel version.
+// ============================================================
+
+const demoReport = {
+  backend: {
+    method: "POST",
+    path: "/predict",
+    function: "predict",
+    request: {
+      input: "str"
+    },
+    response: {
+      prediction: "str",
+      confidence: "float"
+    }
+  },
+
+  ai_service: {
+    method: "POST",
+    path: "/generate",
+    function: "generate",
+    request: {
+      prompt: "str"
+    },
+    response: {
+      result: "str",
+      score: "float"
+    }
+  },
+
+  mappings: [
+    {
+      direction: "request",
+      backend: "input",
+      ai_service: "prompt"
+    },
+    {
+      direction: "response",
+      backend: "prediction",
+      ai_service: "result"
+    },
+    {
+      direction: "response",
+      backend: "confidence",
+      ai_service: "score"
+    }
+  ],
+
+  mismatches: [
+    {
+      type: "path_mismatch",
+      backend: "/predict",
+      ai_service: "/generate"
+    }
+  ],
+
+  verification: {
+    success: true,
+    message: "Interactive demo integration verified",
+    response: {
+      prediction: "positive",
+      confidence: 0.95
+    }
+  },
+
+  download_available: false
+}
+
+
+// ============================================================
+// APP
+// ============================================================
+
 function App() {
+
+  // ----------------------------------------------------------
+  // FILES
+  // ----------------------------------------------------------
+
   const [backendFile, setBackendFile] = useState(null)
   const [aiFile, setAiFile] = useState(null)
 
+
+  // ----------------------------------------------------------
+  // RESULTS
+  // ----------------------------------------------------------
+
   const [report, setReport] = useState(null)
+
+
+  // ----------------------------------------------------------
+  // UI STATE
+  // ----------------------------------------------------------
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   const [jobStep, setJobStep] = useState("")
   const [jobMessage, setJobMessage] = useState("")
 
-  async function handleAnalyze() {
-    if (!backendFile || !aiFile) {
-      setError("Select both services before running Anvay.")
-      return
-    }
+
+  // ==========================================================
+  // DEMO MODE
+  // ==========================================================
+
+  function runDemo() {
 
     setLoading(true)
     setError("")
     setReport(null)
 
-    setJobStep("starting")
-    setJobMessage("Starting Anvay engine")
+    setJobStep("analyzing")
+    setJobMessage(
+      "Reading service contracts"
+    )
+
+
+    setTimeout(() => {
+
+      setJobStep("integrating")
+
+      setJobMessage(
+        "Generating integration adapter"
+      )
+
+    }, 700)
+
+
+    setTimeout(() => {
+
+      setJobStep("verifying")
+
+      setJobMessage(
+        "Running end-to-end verification"
+      )
+
+    }, 1400)
+
+
+    setTimeout(() => {
+
+      setJobStep("packaging")
+
+      setJobMessage(
+        "Preparing verified artifact"
+      )
+
+    }, 2100)
+
+
+    setTimeout(() => {
+
+      setJobStep("complete")
+
+      setJobMessage(
+        "Demo integration complete"
+      )
+
+      setReport(demoReport)
+
+      setLoading(false)
+
+    }, 2800)
+  }
+
+
+  // ==========================================================
+  // REAL ANALYSIS
+  // ==========================================================
+
+  async function handleRealAnalysis() {
 
     const formData = new FormData()
 
-    formData.append("backend_file", backendFile)
-    formData.append("ai_file", aiFile)
+    formData.append(
+      "backend_file",
+      backendFile
+    )
+
+    formData.append(
+      "ai_file",
+      aiFile
+    )
+
 
     try {
-      // Start analysis job
+
+      // ------------------------------------------------------
+      // START JOB
+      // ------------------------------------------------------
+
       const response = await fetch(
-          `${API_URL}/analyze`,
+        `${API_URL}/analyze`,
         {
           method: "POST",
           body: formData
         }
       )
 
-      const startData = await response.json()
+
+      const startData =
+        await response.json()
+
 
       if (!response.ok) {
+
         throw new Error(
-          startData.message || "Could not start Anvay."
+          startData.message ||
+          "Could not start Anvay."
         )
       }
 
-      const jobId = startData.job_id
 
-      // Poll job status
+      const jobId =
+        startData.job_id
+
+
+      // ------------------------------------------------------
+      // POLL JOB
+      // ------------------------------------------------------
+
       const pollStatus = async () => {
-        try {
-          const statusResponse = await fetch(
-            `http://127.0.0.1:9000/status/${jobId}`
+
+        const statusResponse =
+          await fetch(
+            `${API_URL}/status/${jobId}`
           )
 
-          const statusData = await statusResponse.json()
 
-          if (!statusResponse.ok) {
-            throw new Error(
-              statusData.message ||
-              "Could not read analysis status."
-            )
-          }
+        const statusData =
+          await statusResponse.json()
 
-          setJobStep(statusData.step)
-          setJobMessage(statusData.message || "")
 
-          // Job failed
-          if (statusData.step === "failed") {
-            setLoading(false)
+        if (!statusResponse.ok) {
 
-            throw new Error(
-              statusData.message ||
-              "Integration failed."
-            )
-          }
+          throw new Error(
+            statusData.message ||
+            "Could not read analysis status."
+          )
+        }
 
-          // Job completed
-          if (statusData.step === "complete") {
-            setReport(statusData.result)
-            setLoading(false)
-            return
-          }
 
-          // Continue polling
-          setTimeout(pollStatus, 700)
+        setJobStep(
+          statusData.step
+        )
 
-        } catch (err) {
-          setError(
-            err.message ||
-            "Something went wrong while checking progress."
+        setJobMessage(
+          statusData.message || ""
+        )
+
+
+        // ----------------------------------------------------
+        // FAILURE
+        // ----------------------------------------------------
+
+        if (
+          statusData.step === "failed"
+        ) {
+
+          throw new Error(
+            statusData.message ||
+            "Integration failed."
+          )
+        }
+
+
+        // ----------------------------------------------------
+        // SUCCESS
+        // ----------------------------------------------------
+
+        if (
+          statusData.step === "complete"
+        ) {
+
+          setReport(
+            statusData.result
           )
 
           setLoading(false)
+
+          return
         }
+
+
+        // ----------------------------------------------------
+        // KEEP POLLING
+        // ----------------------------------------------------
+
+        setTimeout(
+          pollStatus,
+          700
+        )
       }
+
 
       await pollStatus()
 
     } catch (err) {
+
       setError(
         err.message ||
         "Could not connect to Anvay."
@@ -115,12 +324,78 @@ function App() {
     }
   }
 
+
+  // ==========================================================
+  // MAIN ANALYZE HANDLER
+  // ==========================================================
+
+  async function handleAnalyze() {
+
+    // --------------------------------------------------------
+    // Validate files
+    // --------------------------------------------------------
+
+    if (!backendFile || !aiFile) {
+
+      setError(
+        "Select both services before running Anvay."
+      )
+
+      return
+    }
+
+
+    // --------------------------------------------------------
+    // Reset UI
+    // --------------------------------------------------------
+
+    setLoading(true)
+
+    setError("")
+
+    setReport(null)
+
+    setJobStep("starting")
+
+    setJobMessage(
+      DEMO_MODE
+        ? "Starting interactive demo"
+        : "Starting Anvay engine"
+    )
+
+
+    // --------------------------------------------------------
+    // Demo mode
+    // --------------------------------------------------------
+
+    if (DEMO_MODE) {
+
+      runDemo()
+
+      return
+    }
+
+
+    // --------------------------------------------------------
+    // Real engine
+    // --------------------------------------------------------
+
+    await handleRealAnalysis()
+  }
+
+
+  // ==========================================================
+  // STATUS HELPERS
+  // ==========================================================
+
   const verified =
     report?.verification?.success === true
+
 
   const isAnalyzing =
     jobStep === "starting" ||
     jobStep === "analyzing"
+
 
   const isIntegrating =
     jobStep === "integrating" ||
@@ -128,21 +403,31 @@ function App() {
     jobStep === "packaging" ||
     jobStep === "complete"
 
+
   const isVerifying =
     jobStep === "verifying" ||
     jobStep === "packaging" ||
     jobStep === "complete"
 
+
   const isPackaging =
     jobStep === "packaging" ||
     jobStep === "complete"
+
+
+  // ==========================================================
+  // UI
+  // ==========================================================
 
   return (
     <div className="app">
 
       <div className="grid-bg" />
 
-      {/* HEADER */}
+
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <header className="topbar">
 
@@ -150,25 +435,37 @@ function App() {
           ANVAY<span>.</span>
         </div>
 
+
         <div className="topbar-right">
+
           <span className="live-dot" />
-          LOCAL ENGINE
+
+          {DEMO_MODE
+            ? "DEMO MODE"
+            : "LOCAL ENGINE"}
+
         </div>
 
       </header>
 
 
-      {/* MAIN */}
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
 
       <main className="shell">
 
-        {/* HERO */}
+
+        {/* ===================================================
+            HERO
+        =================================================== */}
 
         <section className="hero">
 
           <div className="eyebrow">
             CODE INTEGRATION / 01
           </div>
+
 
           <h1>
             Integrate the things
@@ -178,29 +475,44 @@ function App() {
             to talk to.
           </h1>
 
+
           <p className="hero-copy">
             Analyze two services. Detect the contract gap.
             Generate the bridge. Verify the result.
           </p>
 
+
+          <p className="mode-note">
+            {DEMO_MODE
+              ? "Interactive product demo"
+              : "Running against your local integration engine"}
+          </p>
+
         </section>
 
 
-        {/* INPUT WORKSPACE */}
+        {/* ===================================================
+            INPUT WORKSPACE
+        =================================================== */}
 
         <section className="workspace">
+
 
           <div className="workspace-head">
 
             <div>
+
               <div className="mini-label">
                 INPUTS
               </div>
 
+
               <h2>
                 Drop your services.
               </h2>
+
             </div>
+
 
             <div className="step-count">
               01 / 03
@@ -209,7 +521,12 @@ function App() {
           </div>
 
 
+          {/* -------------------------------------------------
+              UPLOAD CARDS
+          ------------------------------------------------- */}
+
           <div className="upload-grid">
+
 
             {/* BACKEND */}
 
@@ -219,13 +536,17 @@ function App() {
                 type="file"
                 accept=".py"
                 onChange={(event) => {
+
                   const file =
-                    event.target.files?.[0] || null
+                    event.target.files?.[0] ||
+                    null
 
                   setBackendFile(file)
+
                   setError("")
                 }}
               />
+
 
               <div className="dropzone-top">
 
@@ -233,30 +554,41 @@ function App() {
                   01
                 </span>
 
+
                 <span className="service-tag">
                   BACKEND
                 </span>
 
               </div>
 
+
               <div className="drop-icon">
                 ↗
               </div>
 
+
               <div className="drop-title">
+
                 {backendFile
                   ? backendFile.name
                   : "Choose backend"}
+
               </div>
+
 
               <div className="drop-description">
+
                 Python / FastAPI service
+
               </div>
 
+
               <div className="drop-footer">
+
                 {backendFile
                   ? "FILE READY"
                   : "SELECT FILE"}
+
               </div>
 
             </label>
@@ -270,13 +602,17 @@ function App() {
                 type="file"
                 accept=".py"
                 onChange={(event) => {
+
                   const file =
-                    event.target.files?.[0] || null
+                    event.target.files?.[0] ||
+                    null
 
                   setAiFile(file)
+
                   setError("")
                 }}
               />
+
 
               <div className="dropzone-top">
 
@@ -284,30 +620,41 @@ function App() {
                   02
                 </span>
 
+
                 <span className="service-tag">
                   AI SERVICE
                 </span>
 
               </div>
 
+
               <div className="drop-icon">
                 ✦
               </div>
 
+
               <div className="drop-title">
+
                 {aiFile
                   ? aiFile.name
                   : "Choose AI service"}
+
               </div>
+
 
               <div className="drop-description">
+
                 Model / inference endpoint
+
               </div>
 
+
               <div className="drop-footer">
+
                 {aiFile
                   ? "FILE READY"
                   : "SELECT FILE"}
+
               </div>
 
             </label>
@@ -315,7 +662,9 @@ function App() {
           </div>
 
 
-          {/* RUN */}
+          {/* =================================================
+              RUN BUTTON
+          ================================================= */}
 
           <div className="run-row">
 
@@ -331,6 +680,7 @@ function App() {
                   : "RUN ANVAY"}
               </span>
 
+
               <span className="run-arrow">
                 →
               </span>
@@ -340,7 +690,9 @@ function App() {
           </div>
 
 
-          {/* LIVE PROGRESS */}
+          {/* =================================================
+              LIVE PROGRESS
+          ================================================= */}
 
           {loading && (
 
@@ -350,9 +702,13 @@ function App() {
                 ANVAY ENGINE
               </div>
 
+
               <div className="progress-list">
 
-                {/* ANALYZE */}
+
+                {/* -----------------------------------------
+                    01 ANALYZING
+                ----------------------------------------- */}
 
                 <div
                   className={
@@ -362,22 +718,34 @@ function App() {
                   }
                 >
 
-                  <span>01</span>
+                  <span>
+                    01
+                  </span>
+
 
                   <strong>
-                    {isAnalyzing ? "ANALYZING" : "ANALYZED"}
+
+                    {isAnalyzing
+                      ? "ANALYZING"
+                      : "ANALYZED"}
+
                   </strong>
 
+
                   <small>
+
                     {isAnalyzing
                       ? jobMessage
                       : "Contracts detected"}
+
                   </small>
 
                 </div>
 
 
-                {/* INTEGRATE */}
+                {/* -----------------------------------------
+                    02 INTEGRATING
+                ----------------------------------------- */}
 
                 <div
                   className={
@@ -389,26 +757,36 @@ function App() {
                   }
                 >
 
-                  <span>02</span>
+                  <span>
+                    02
+                  </span>
+
 
                   <strong>
+
                     {jobStep === "integrating"
                       ? "INTEGRATING"
                       : isIntegrating
                       ? "INTEGRATED"
                       : "INTEGRATING"}
+
                   </strong>
 
+
                   <small>
+
                     {jobStep === "integrating"
                       ? jobMessage
                       : "Generating adapter"}
+
                   </small>
 
                 </div>
 
 
-                {/* VERIFY */}
+                {/* -----------------------------------------
+                    03 VERIFYING
+                ----------------------------------------- */}
 
                 <div
                   className={
@@ -420,26 +798,36 @@ function App() {
                   }
                 >
 
-                  <span>03</span>
+                  <span>
+                    03
+                  </span>
+
 
                   <strong>
+
                     {jobStep === "verifying"
                       ? "VERIFYING"
                       : isVerifying
                       ? "VERIFIED"
                       : "VERIFYING"}
+
                   </strong>
 
+
                   <small>
+
                     {jobStep === "verifying"
                       ? jobMessage
-                      : "Docker end-to-end test"}
+                      : "End-to-end integration test"}
+
                   </small>
 
                 </div>
 
 
-                {/* PACKAGE */}
+                {/* -----------------------------------------
+                    04 PACKAGING
+                ----------------------------------------- */}
 
                 <div
                   className={
@@ -451,20 +839,28 @@ function App() {
                   }
                 >
 
-                  <span>04</span>
+                  <span>
+                    04
+                  </span>
+
 
                   <strong>
+
                     {jobStep === "packaging"
                       ? "PACKAGING"
                       : isPackaging
                       ? "READY"
                       : "PACKAGING"}
+
                   </strong>
 
+
                   <small>
+
                     {jobStep === "packaging"
                       ? jobMessage
                       : "Preparing project ZIP"}
+
                   </small>
 
                 </div>
@@ -478,7 +874,9 @@ function App() {
         </section>
 
 
-        {/* ERROR */}
+        {/* ===================================================
+            ERROR
+        =================================================== */}
 
         {error && (
 
@@ -488,11 +886,13 @@ function App() {
               !
             </span>
 
+
             <div>
 
               <strong>
                 ANVAY STOPPED
               </strong>
+
 
               <p>
                 {error}
@@ -505,13 +905,18 @@ function App() {
         )}
 
 
-        {/* RESULT */}
+        {/* ===================================================
+            RESULTS
+        =================================================== */}
 
         {report && (
 
           <section className="results">
 
-            {/* STATUS */}
+
+            {/* =================================================
+                STATUS
+            ================================================= */}
 
             <div
               className={
@@ -524,8 +929,13 @@ function App() {
               <div className="status-left">
 
                 <div className="status-symbol">
-                  {verified ? "✓" : "!"}
+
+                  {verified
+                    ? "✓"
+                    : "!"}
+
                 </div>
+
 
                 <div>
 
@@ -533,30 +943,39 @@ function App() {
                     INTEGRATION STATUS
                   </div>
 
+
                   <div className="status-title">
+
                     {verified
                       ? "VERIFIED"
                       : "FAILED"}
+
                   </div>
 
                 </div>
 
               </div>
 
+
               <div className="status-message">
+
                 {report.verification?.message}
+
               </div>
 
             </div>
 
 
-            {/* SYSTEM MAP */}
+            {/* =================================================
+                SYSTEM MAP
+            ================================================= */}
 
             <div className="result-heading">
 
               <div className="mini-label">
                 SYSTEM MAP
               </div>
+
 
               <h2>
                 What Anvay connected
@@ -567,37 +986,58 @@ function App() {
 
             <div className="pipeline">
 
+
+              {/* BACKEND NODE */}
+
               <div className="pipeline-node">
 
                 <div className="node-index">
                   01
                 </div>
 
+
                 <div className="node-type">
                   BACKEND
                 </div>
 
+
                 <div className="node-endpoint">
-                  {report.backend.method}{" "}
+
+                  {report.backend.method}
+                  {" "}
                   {report.backend.path}
+
                 </div>
 
               </div>
 
+
+              {/* ANVAY BRIDGE */}
 
               <div className="pipeline-bridge">
 
                 <div className="bridge-line" />
 
+
                 <div className="bridge-box">
-                  <span>ANVAY</span>
-                  <small>ADAPTER</small>
+
+                  <span>
+                    ANVAY
+                  </span>
+
+                  <small>
+                    ADAPTER
+                  </small>
+
                 </div>
+
 
                 <div className="bridge-line" />
 
               </div>
 
+
+              {/* AI NODE */}
 
               <div className="pipeline-node">
 
@@ -605,13 +1045,18 @@ function App() {
                   02
                 </div>
 
+
                 <div className="node-type">
                   AI SERVICE
                 </div>
 
+
                 <div className="node-endpoint">
-                  {report.ai_service.method}{" "}
+
+                  {report.ai_service.method}
+                  {" "}
                   {report.ai_service.path}
+
                 </div>
 
               </div>
@@ -619,9 +1064,12 @@ function App() {
             </div>
 
 
-            {/* CONTRACTS */}
+            {/* =================================================
+                CONTRACTS
+            ================================================= */}
 
             <div className="data-grid">
+
 
               {/* BACKEND CONTRACT */}
 
@@ -632,6 +1080,7 @@ function App() {
                   <span>
                     BACKEND CONTRACT
                   </span>
+
 
                   <span>
                     {report.backend.path}
@@ -646,6 +1095,7 @@ function App() {
                     REQUEST
                   </div>
 
+
                   {Object.entries(
                     report.backend.request || {}
                   ).map(([key, value]) => (
@@ -658,6 +1108,7 @@ function App() {
                       <code>
                         {key}
                       </code>
+
 
                       <span>
                         {value}
@@ -676,6 +1127,7 @@ function App() {
                     RESPONSE
                   </div>
 
+
                   {Object.entries(
                     report.backend.response || {}
                   ).map(([key, value]) => (
@@ -688,6 +1140,7 @@ function App() {
                       <code>
                         {key}
                       </code>
+
 
                       <span>
                         {value}
@@ -712,6 +1165,7 @@ function App() {
                     AI CONTRACT
                   </span>
 
+
                   <span>
                     {report.ai_service.path}
                   </span>
@@ -725,6 +1179,7 @@ function App() {
                     REQUEST
                   </div>
 
+
                   {Object.entries(
                     report.ai_service.request || {}
                   ).map(([key, value]) => (
@@ -737,6 +1192,7 @@ function App() {
                       <code>
                         {key}
                       </code>
+
 
                       <span>
                         {value}
@@ -755,6 +1211,7 @@ function App() {
                     RESPONSE
                   </div>
 
+
                   {Object.entries(
                     report.ai_service.response || {}
                   ).map(([key, value]) => (
@@ -767,6 +1224,7 @@ function App() {
                       <code>
                         {key}
                       </code>
+
 
                       <span>
                         {value}
@@ -783,13 +1241,16 @@ function App() {
             </div>
 
 
-            {/* MAPPINGS */}
+            {/* =================================================
+                MAPPINGS
+            ================================================= */}
 
             <div className="result-heading compact">
 
               <div className="mini-label">
                 CONTRACT TRANSLATION
               </div>
+
 
               <h2>
                 Generated mappings
@@ -812,9 +1273,11 @@ function App() {
                       {mapping.backend}
                     </span>
 
+
                     <span className="mapping-arrow">
                       →
                     </span>
+
 
                     <span className="mapping-target">
                       {mapping.ai_service}
@@ -828,13 +1291,16 @@ function App() {
             </div>
 
 
-            {/* MISMATCH */}
+            {/* =================================================
+                MISMATCHES
+            ================================================= */}
 
             <div className="result-heading compact">
 
               <div className="mini-label">
                 DETECTED DIFFERENCES
               </div>
+
 
               <h2>
                 Mismatches
@@ -849,8 +1315,13 @@ function App() {
               report.mismatches.length === 0 ? (
 
                 <div className="clean-state">
-                  <span>✓</span>
+
+                  <span>
+                    ✓
+                  </span>
+
                   No mismatches detected
+
                 </div>
 
               ) : (
@@ -867,16 +1338,22 @@ function App() {
                         !
                       </span>
 
+
                       <div>
 
                         <strong>
                           {mismatch.type}
                         </strong>
 
+
                         <p>
+
                           {mismatch.backend}
+
                           {" → "}
+
                           {mismatch.ai_service}
+
                         </p>
 
                       </div>
@@ -891,13 +1368,16 @@ function App() {
             </div>
 
 
-            {/* VERIFICATION */}
+            {/* =================================================
+                VERIFICATION
+            ================================================= */}
 
             <div className="result-heading compact">
 
               <div className="mini-label">
                 RUNTIME CHECK
               </div>
+
 
               <h2>
                 Verification
@@ -908,38 +1388,72 @@ function App() {
 
             <div className="verification-grid">
 
-              <div className="verify-cell">
-                <span>DOCKER BUILD</span>
-                <strong>
-                  {verified ? "PASS" : "FAIL"}
-                </strong>
-              </div>
 
               <div className="verify-cell">
-                <span>BACKEND</span>
+
+                <span>
+                  DOCKER BUILD
+                </span>
+
                 <strong>
-                  {verified ? "PASS" : "FAIL"}
+                  {verified
+                    ? "PASS"
+                    : "FAIL"}
                 </strong>
+
               </div>
 
-              <div className="verify-cell">
-                <span>AI SERVICE</span>
-                <strong>
-                  {verified ? "PASS" : "FAIL"}
-                </strong>
-              </div>
 
               <div className="verify-cell">
-                <span>E2E REQUEST</span>
+
+                <span>
+                  BACKEND
+                </span>
+
                 <strong>
-                  {verified ? "PASS" : "FAIL"}
+                  {verified
+                    ? "PASS"
+                    : "FAIL"}
                 </strong>
+
+              </div>
+
+
+              <div className="verify-cell">
+
+                <span>
+                  AI SERVICE
+                </span>
+
+                <strong>
+                  {verified
+                    ? "PASS"
+                    : "FAIL"}
+                </strong>
+
+              </div>
+
+
+              <div className="verify-cell">
+
+                <span>
+                  E2E REQUEST
+                </span>
+
+                <strong>
+                  {verified
+                    ? "PASS"
+                    : "FAIL"}
+                </strong>
+
               </div>
 
             </div>
 
 
-            {/* TEST RESPONSE */}
+            {/* =================================================
+                TEST RESPONSE
+            ================================================= */}
 
             {report.verification?.response && (
 
@@ -948,6 +1462,7 @@ function App() {
                 <div className="contract-label">
                   TEST RESPONSE
                 </div>
+
 
                 <pre>
 {JSON.stringify(
@@ -962,7 +1477,9 @@ function App() {
             )}
 
 
-            {/* DOWNLOAD */}
+            {/* =================================================
+                DOWNLOAD
+            ================================================= */}
 
             {report.download_available && (
 
@@ -974,9 +1491,11 @@ function App() {
                     VERIFIED ARTIFACT
                   </div>
 
+
                   <h3>
                     Your integration is ready.
                   </h3>
+
 
                   <p>
                     Anvay built and verified the
@@ -985,14 +1504,43 @@ function App() {
 
                 </div>
 
+
                 <a
                   href={`${API_URL}/download`}
                   className="download-button"
                   download
                 >
                   DOWNLOAD ZIP
-                  <span>↓</span>
+                  <span>
+                    ↓
+                  </span>
                 </a>
+
+              </div>
+
+            )}
+
+
+            {/* =================================================
+                DEMO NOTICE
+            ================================================= */}
+
+            {DEMO_MODE && (
+
+              <div className="test-response">
+
+                <div className="contract-label">
+                  DEMO MODE
+                </div>
+
+
+                <pre>
+This is an interactive demonstration of
+Anvay's integration workflow.
+
+Run Anvay locally to execute the real
+Docker-based integration engine.
+                </pre>
 
               </div>
 
@@ -1005,13 +1553,16 @@ function App() {
       </main>
 
 
-      {/* FOOTER */}
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
 
       <footer className="footer">
 
         <span>
           ANVAY / INTEGRATION ENGINE
         </span>
+
 
         <span>
           BUILD 01
@@ -1022,5 +1573,6 @@ function App() {
     </div>
   )
 }
+
 
 export default App

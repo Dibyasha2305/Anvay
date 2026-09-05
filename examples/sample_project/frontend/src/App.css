@@ -800,3 +800,10 @@ a {
     border-right: 0;
   }
 }
+.mode-note {
+  margin-top: 12px;
+  color: #60695c;
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
