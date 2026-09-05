@@ -1,3 +1,28 @@
+# Python
 .venv/
-____pycache__/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / secrets
 .env
+.env.*
+!.env.example
+
+# Node / Vite
+node_modules/
+dist/
+
+# Generated Anvay output
+generated/integrated_project/
+generated/*.zip
+generated/glue.py
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
